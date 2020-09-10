@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate clap;
+
 use cargo::util::Config;
 use cargo::core::shell::Shell;
 use cargo::CliError;
@@ -7,36 +10,28 @@ use cargo::ops::OutputMetadataOptions;
 
 
 fn main() {
+    let matches = App::new(crate_name!()).author(crate_authors!()).about(crate_description!()).version(crate_version!())
+        .subcommand(SubCommand::with_name("sinofseven").about("test call"))
+        .get_matches();
+
     let mut config = match Config::default() {
-        Ok(cfg) => cfg,
+        Ok(config) => config,
         Err(e) => {
             let mut shell = Shell::new();
             cargo::exit_with_error(e.into(), &mut shell)
         }
     };
 
-    let result = match cargo::ops::fix_maybe_exec_rustc() {
-        Ok(true) => Ok(()),
-        Ok(false) => {
-            let _token = cargo::util::job::setup();
-            cli_main(&mut config)
-        },
-        Err(e) => Err(CliError::from(e))
+    match matches.subcommand() {
+        ("sinofseven", Some(arg)) => cli_main(arg, &mut config),
+        _ => {
+            eprintln!("error subcommand");
+            Err(CliError::code(1))
+        }
     };
-
-    match result {
-        Err(e) => cargo::exit_with_error(e, &mut *config.shell()),
-        Ok(()) => {}
-    }
 }
 
-fn cli_main(config: &mut Config) -> Result<(), CliError> {
-    let app = SubCommand::with_name("metadata").get_matches();
-
-    let (_, args) = app.subcommand();
-    // let args = args.unwrap();
-    let args = ArgMatches::default();
-
+fn cli_main(args: &ArgMatches, config: &mut Config) -> Result<(), CliError> {
     let ws = match args.workspace(config) {
         Ok(ws) => ws,
         Err(e) => return Err(CliError::from(e))
